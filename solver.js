@@ -9,6 +9,8 @@ const Solver = (() => {
   const GUESS_MARGIN = 0.05; // 猜測時只考慮雷機率不超過最低值 (1 + 5%) 倍的格子
   const MAX_CANDIDATES = 10;
   const PROGRESS_SAFETY_WEIGHT = 1;
+  const AVOID_DEAD_CELLS = true;
+  const FIFTY_FIFTY_FIRST = true;
 
   const nbCache = new Map();
 
@@ -344,6 +346,14 @@ const Solver = (() => {
       if (cells[i] === UNKNOWN && a.prob[i] < 1 - EPS) list.push(i);
     }
     if (!list.length || a.logZ === -Infinity) return;
+    if (FIFTY_FIFTY_FIRST) {
+      const pair = findForcedFiftyFifty(view, a);
+      if (pair >= 0) {
+        a.best = pair;
+        a.bestProb = a.prob[pair];
+        return;
+      }
+    }
     let minP = Infinity;
     for (const i of list) minP = Math.min(minP, a.prob[i]);
     const unkNb = i => nb[i].reduce((s, j) => s + (cells[j] === UNKNOWN), 0);
@@ -357,7 +367,7 @@ const Solver = (() => {
     frontier.sort((x, y) => a.prob[x] - a.prob[y]);
     const candidates = frontier.slice(0, MAX_CANDIDATES).concat(inner.slice(0, 2));
 
-    let best = a.best, bestScore = -Infinity;
+    let best = a.best, bestScore = -Infinity, bestDead = true;
     const next = Int8Array.from(cells);
     for (const c of candidates) {
       let flags = 0, unk = 0;
@@ -365,23 +375,56 @@ const Solver = (() => {
         if (cells[j] === FLAG) flags++;
         else if (cells[j] === UNKNOWN) unk++;
       }
-      let progress = 0;
+      let progress = 0, outcomes = 0;
       for (let v = flags; v <= flags + unk; v++) {
         next[c] = v;
         const b = analyzeCore({ ...view, cells: next }, LOOKAHEAD_NODE_LIMIT);
         if (b.logZ === -Infinity) continue;
         const pv = Math.exp(b.logZ - a.logZ);
+        if (pv > 1e-9) outcomes++;
         if (b.safe.length || b.unknownCount === b.mines.length) progress += pv;
       }
       next[c] = UNKNOWN;
+      // 死格：翻開後只可能出現一種數字，得不到新資訊，有其他選擇時就不猜它
+      const dead = AVOID_DEAD_CELLS && outcomes <= 1;
       const score = progress + PROGRESS_SAFETY_WEIGHT * (1 - a.prob[c]);
-      if (score > bestScore + 1e-9) {
+      if ((bestDead && !dead) || (dead === bestDead && score > bestScore + 1e-9)) {
         bestScore = score;
         best = c;
+        bestDead = dead;
       }
     }
     a.best = best;
     a.bestProb = a.prob[best];
+  }
+
+  // 找出無法靠推理分辨的 50/50：某個數字只剩兩格未定且恰好一顆雷，
+  // 而且只與其中一格相鄰的格子都是確定的雷，或是周圍已沒有其他未定格的數字（之後翻任何格子都無法分辨它們）。
+  // 這種格子遲早要猜，先猜還能用翻出的數字幫助其他區域。
+  function findForcedFiftyFifty({ w, h, cells }, a) {
+    const nb = getNeighbors(w, h);
+    const isMine = j => cells[j] === FLAG || (cells[j] === UNKNOWN && a.prob[j] > 1 - EPS);
+    const undetermined = j => cells[j] === UNKNOWN && !isMine(j);
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i] < 0) continue;
+      let need = cells[i];
+      const open = [];
+      for (const j of nb[i]) {
+        if (isMine(j)) need--;
+        else if (cells[j] === UNKNOWN) open.push(j);
+      }
+      if (open.length !== 2 || need !== 1) continue;
+      const [x, y] = open;
+      if (Math.abs(a.prob[x] - 0.5) > 1e-6 || Math.abs(a.prob[y] - 0.5) > 1e-6) continue;
+      // 只與其中一格相鄰的格子 j：必須是確定的雷，或是除了 x、y 以外沒有未定鄰格的已開數字
+      const settled = j => isMine(j) || (cells[j] >= 0 && nb[j].every(k => k === x || k === y || !undetermined(k)));
+      const nx = new Set(nb[x]), ny = new Set(nb[y]);
+      let forced = true;
+      for (const j of nb[x]) if (j !== y && !ny.has(j) && !settled(j)) forced = false;
+      for (const j of nb[y]) if (j !== x && !nx.has(j) && !settled(j)) forced = false;
+      if (forced) return x;
+    }
+    return -1;
   }
 
   return { analyze, getNeighbors, UNKNOWN, FLAG };

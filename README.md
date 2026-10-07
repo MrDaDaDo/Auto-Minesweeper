@@ -56,6 +56,8 @@ The AI flags every cell that is certainly a mine and opens every cell that is ce
 
 4. **Lookahead guessing**: for the cells whose mine probability is at most 5% (relative) above the lowest, the solver tries every number the cell could show if it were opened, re-solves each hypothetical board, and weights it by its exact probability. It picks the cell with the best combination of *being safe* and *being safe and then leading to a certain move*, instead of blindly taking the lowest probability. Because the margin is relative, it never trades a noticeably higher risk for information (e.g. at most 21% when the safest cell is 20%).
 
+5. **Dead cells and forced 50/50s**: a cell that can only ever show one number gives no information, so it is avoided when there is another choice. A pair of cells that holds exactly one mine and can never be told apart by any future move must be guessed eventually, so the AI guesses it right away and uses the revealed number to help elsewhere.
+
 If a group is too large to enumerate exactly, it falls back to a local approximation, and approximate values are never treated as certain.
 
 <img src="assets/screenshot.png" alt="An Expert board mid-game with mine probabilities shown" width="720">
@@ -68,9 +70,9 @@ Measured over simulated games with the same rules as the page (first click opens
 | --- | --- | --- | --- | --- |
 | Beginner | 9×9 | 10 | 10,000 | 96.3% |
 | Intermediate | 16×16 | 40 | 3,000 | 88.1% |
-| Expert | 30×16 | 99 | 4,000 | 52.9% |
+| Expert | 30×16 | 99 | 8,000 | 52.2% |
 
-On the same 4,000 Expert boards, lookahead guessing wins 52.9% versus 50.4% for always picking the lowest-probability cell. Losses come from positions where no cell is provably safe and the AI has to guess.
+On the same Expert boards, lookahead guessing wins about 2–3 percentage points more often than always picking the lowest-probability cell. About 45% of Expert losses happen on a guess where every remaining option is at least 50% likely to be a mine, which no strategy can avoid. Losses come from positions where no cell is provably safe and the AI has to guess.
 
 ## Project Structure
 
