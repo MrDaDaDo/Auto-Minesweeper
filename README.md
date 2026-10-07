@@ -54,7 +54,7 @@ Every opened number is a constraint: *the covered cells around it contain exactl
 
 The AI flags every cell that is certainly a mine and opens every cell that is certainly safe, one action at a time. When nothing is certain, it has to guess, and a smarter guess wins more games:
 
-4. **Lookahead guessing**: for the few cells whose mine probability is close to the lowest, the solver tries every number the cell could show if it were opened, re-solves each hypothetical board, and weights it by its exact probability. It picks the cell with the best combination of *being safe* and *being safe and then leading to a certain move*, instead of blindly taking the lowest probability.
+4. **Lookahead guessing**: for the cells whose mine probability is at most 5% (relative) above the lowest, the solver tries every number the cell could show if it were opened, re-solves each hypothetical board, and weights it by its exact probability. It picks the cell with the best combination of *being safe* and *being safe and then leading to a certain move*, instead of blindly taking the lowest probability. Because the margin is relative, it never trades a noticeably higher risk for information (e.g. at most 21% when the safest cell is 20%).
 
 If a group is too large to enumerate exactly, it falls back to a local approximation, and approximate values are never treated as certain.
 

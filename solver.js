@@ -6,7 +6,7 @@ const Solver = (() => {
   const LOOKAHEAD_NODE_LIMIT = 20000; // 猜測前模擬翻開結果時用較小的上限
   const APPROX_CLAMP = 0.001; // 近似機率不可當成確定，夾在 (0, 1) 之間
   const EPS = 1e-9;
-  const GUESS_MARGIN = 0.05; // 猜測時考慮機率比最低值高出這麼多以內的格子
+  const GUESS_MARGIN = 0.05; // 猜測時只考慮雷機率不超過最低值 (1 + 5%) 倍的格子
   const MAX_CANDIDATES = 10;
   const PROGRESS_SAFETY_WEIGHT = 1;
 
@@ -350,7 +350,7 @@ const Solver = (() => {
     // 只考慮機率在最低值附近的格子；內部格（沒有鄰接數字）機率都相同，只取鄰居最少的幾格
     const frontier = [], inner = [];
     for (const i of list) {
-      if (a.prob[i] > minP + GUESS_MARGIN) continue;
+      if (a.prob[i] > minP * (1 + GUESS_MARGIN) + EPS) continue;
       (nb[i].some(j => cells[j] >= 0) ? frontier : inner).push(i);
     }
     inner.sort((x, y) => unkNb(x) - unkNb(y));
