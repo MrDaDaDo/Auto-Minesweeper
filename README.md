@@ -13,9 +13,9 @@
 ![Vanilla JS](https://img.shields.io/badge/vanilla-JavaScript-f7df1e.svg?logo=javascript&logoColor=black)
 [![GitHub stars](https://img.shields.io/github/stars/MrDaDaDo/Auto-Minesweeper?style=social)](https://github.com/MrDaDaDo/Auto-Minesweeper/stargazers)
 
-<img src="assets/screenshot.png" alt="The AI solving an Expert board with mine probabilities shown" width="720">
+<img src="assets/demo.gif" alt="The AI solving an Intermediate board with mine probabilities shown" width="400">
 
-<sub>The AI mid-game on Expert, with the mine probability of every covered cell shown</sub>
+<sub>The AI winning an Intermediate game, with the mine probability (%) of every covered cell shown</sub>
 
 </div>
 
@@ -52,7 +52,13 @@ Every opened number is a constraint: *the covered cells around it contain exactl
 2. **Exact probabilities**: the remaining frontier cells are split into independent groups that share no constraint. For each group, a backtracking search enumerates every valid mine layout, counting solutions by how many mines they use.
 3. **Global mine count**: the groups are combined by convolution, and each total is weighted by the number of ways to place the leftover mines in the unconstrained interior cells, `C(interior, minesLeft − K)` (computed in log space). This gives the exact probability for every covered cell, frontier and interior alike.
 
-Each AI step flags every cell that is certainly a mine and opens every cell that is certainly safe. Only when nothing is certain does it **guess the cell with the lowest mine probability**, preferring cells with fewer covered neighbors (corners and edges are more likely to open an area) when probabilities tie. If a group is too large to enumerate, it falls back to a local approximation.
+The AI flags every cell that is certainly a mine and opens every cell that is certainly safe, one action at a time. When nothing is certain, it has to guess, and a smarter guess wins more games:
+
+4. **Lookahead guessing**: for the few cells whose mine probability is close to the lowest, the solver tries every number the cell could show if it were opened, re-solves each hypothetical board, and weights it by its exact probability. It picks the cell with the best combination of *being safe* and *being safe and then leading to a certain move*, instead of blindly taking the lowest probability.
+
+If a group is too large to enumerate exactly, it falls back to a local approximation, and approximate values are never treated as certain.
+
+<img src="assets/screenshot.png" alt="An Expert board mid-game with mine probabilities shown" width="720">
 
 ### Win rates
 
@@ -60,11 +66,11 @@ Measured over simulated games with the same rules as the page (first click opens
 
 | Board | Size | Mines | Games | AI win rate |
 | --- | --- | --- | --- | --- |
-| Beginner | 9×9 | 10 | 5,000 | 95.9% |
-| Intermediate | 16×16 | 40 | 1,000 | 88.2% |
-| Expert | 30×16 | 99 | 500 | 52.0% |
+| Beginner | 9×9 | 10 | 10,000 | 96.3% |
+| Intermediate | 16×16 | 40 | 3,000 | 88.1% |
+| Expert | 30×16 | 99 | 4,000 | 52.9% |
 
-Losses come from positions where no cell is provably safe and the AI has to guess.
+On the same 4,000 Expert boards, lookahead guessing wins 52.9% versus 50.4% for always picking the lowest-probability cell. Losses come from positions where no cell is provably safe and the AI has to guess.
 
 ## Project Structure
 

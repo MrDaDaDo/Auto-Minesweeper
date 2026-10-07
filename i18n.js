@@ -49,7 +49,7 @@ const I18N = (() => {
       statsNone: 'AI record on this board: no games yet',
       tip: '<b>How to play:</b> <b>Left click</b> to open a cell, <b>right click</b> to place a flag. Click an opened number whose mines are all flagged to open its neighbors. On mobile, <b>long press</b> or use <b>Flag mode</b>. Press <b>F2</b> for a new game.',
       aboutTitle: 'About Auto-Minesweeper',
-      about: `Auto-Minesweeper is a free, open-source Minesweeper game with a built-in AI solver. Press <b>AI Autoplay</b> to watch it play, or press <b>Hint</b> to see the best next move. The AI first applies simple logic, then computes the <b>exact mine probability</b> of every covered cell by enumerating all valid mine layouts on the frontier, and guesses the safest cell only when nothing is certain. Turn on <b>Show mine probabilities</b> to see its reasoning, and <b>Auto restart</b> to measure its win rate. Source code on ${REPO}.`,
+      about: `Auto-Minesweeper is a free, open-source Minesweeper game with a built-in AI solver. Press <b>AI Autoplay</b> to watch it play, or press <b>Hint</b> to see the best next move. The AI first applies simple logic, then computes the <b>exact mine probability</b> of every covered cell by enumerating all valid mine layouts on the frontier, and when nothing is certain, looks one move ahead to pick the guess most likely to be safe and lead to progress. Turn on <b>Show mine probabilities</b> to see its reasoning, and <b>Auto restart</b> to measure its win rate. Source code on ${REPO}.`,
     },
     'zh-Hant': {
       mines: '地雷',
@@ -87,7 +87,7 @@ const I18N = (() => {
       statsNone: '此盤面 AI 戰績：尚無紀錄',
       tip: '<b>操作方式：</b><b>左鍵</b> 翻開格子，<b>右鍵</b> 插旗；在已插滿旗的數字上點一下可翻開周圍格子。手機可 <b>長按</b> 插旗或切換 <b>插旗模式</b>。按 <b>F2</b> 開新局。',
       aboutTitle: '關於 Auto-Minesweeper',
-      about: `Auto-Minesweeper 是免費、開源的踩地雷遊戲，內建 AI 求解器。按 <b>AI 自動玩</b> 看它自己玩，或按 <b>提示</b> 查看最佳的下一步。AI 會先做簡單推理，再窮舉邊界所有合法的地雷配置，算出每個未翻開格子的<b>精確地雷機率</b>；只有在沒有確定安全的格子時，才會猜最安全的那一格。開啟 <b>顯示地雷機率</b> 可以看到它的判斷，開啟 <b>自動重新開局</b> 可以統計勝率。原始碼在 ${REPO}。`,
+      about: `Auto-Minesweeper 是免費、開源的踩地雷遊戲，內建 AI 求解器。按 <b>AI 自動玩</b> 看它自己玩，或按 <b>提示</b> 查看最佳的下一步。AI 會先做簡單推理，再窮舉邊界所有合法的地雷配置，算出每個未翻開格子的<b>精確地雷機率</b>；沒有確定安全的格子時，會往後模擬一步，挑最可能安全、且翻開後能推出下一步的格子來猜。開啟 <b>顯示地雷機率</b> 可以看到它的判斷，開啟 <b>自動重新開局</b> 可以統計勝率。原始碼在 ${REPO}。`,
     },
     'zh-Hans': {
       mines: '地雷',
@@ -125,7 +125,7 @@ const I18N = (() => {
       statsNone: '此盘面 AI 战绩：暂无记录',
       tip: '<b>操作方式：</b><b>左键</b> 翻开格子，<b>右键</b> 插旗；在已插满旗的数字上点一下可翻开周围格子。手机可 <b>长按</b> 插旗或切换 <b>插旗模式</b>。按 <b>F2</b> 开新局。',
       aboutTitle: '关于 Auto-Minesweeper',
-      about: `Auto-Minesweeper 是免费、开源的扫雷游戏，内置 AI 求解器。按 <b>AI 自动玩</b> 看它自己玩，或按 <b>提示</b> 查看最佳的下一步。AI 会先做简单推理，再穷举边界所有合法的地雷配置，算出每个未翻开格子的<b>精确地雷概率</b>；只有在没有确定安全的格子时，才会猜最安全的那一格。开启 <b>显示地雷概率</b> 可以看到它的判断，开启 <b>自动重新开局</b> 可以统计胜率。源代码在 ${REPO}。`,
+      about: `Auto-Minesweeper 是免费、开源的扫雷游戏，内置 AI 求解器。按 <b>AI 自动玩</b> 看它自己玩，或按 <b>提示</b> 查看最佳的下一步。AI 会先做简单推理，再穷举边界所有合法的地雷配置，算出每个未翻开格子的<b>精确地雷概率</b>；没有确定安全的格子时，会往后模拟一步，挑最可能安全、且翻开后能推出下一步的格子来猜。开启 <b>显示地雷概率</b> 可以看到它的判断，开启 <b>自动重新开局</b> 可以统计胜率。源代码在 ${REPO}。`,
     },
     ja: {
       mines: '地雷',
@@ -163,7 +163,7 @@ const I18N = (() => {
       statsNone: 'この盤面での AI の戦績：まだありません',
       tip: '<b>遊び方：</b><b>左クリック</b>でマスを開き、<b>右クリック</b>で旗を立てます。旗が揃った数字をクリックすると周囲をまとめて開けます。スマホでは<b>長押し</b>か<b>旗モード</b>を使います。<b>F2</b> で新しいゲーム。',
       aboutTitle: 'Auto-Minesweeper について',
-      about: `Auto-Minesweeper は AI ソルバーを内蔵した無料・オープンソースのマインスイーパーです。<b>AI 自動プレイ</b>で AI のプレイを観戦したり、<b>ヒント</b>で最善の次の一手を確認できます。AI はまず簡単な論理で推論し、次に境界上のあり得る地雷配置をすべて列挙して、各マスの<b>正確な地雷確率</b>を計算します。確実に安全なマスがないときだけ、最も安全なマスを推測します。<b>地雷確率を表示</b>で AI の判断を、<b>自動で再スタート</b>で勝率を確認できます。ソースコードは ${REPO} にあります。`,
+      about: `Auto-Minesweeper は AI ソルバーを内蔵した無料・オープンソースのマインスイーパーです。<b>AI 自動プレイ</b>で AI のプレイを観戦したり、<b>ヒント</b>で最善の次の一手を確認できます。AI はまず簡単な論理で推論し、次に境界上のあり得る地雷配置をすべて列挙して、各マスの<b>正確な地雷確率</b>を計算します。確実に安全なマスがないときは一手先を読み、安全かつ次の一手につながりやすいマスを選んで推測します。<b>地雷確率を表示</b>で AI の判断を、<b>自動で再スタート</b>で勝率を確認できます。ソースコードは ${REPO} にあります。`,
     },
     ko: {
       mines: '지뢰',
@@ -201,7 +201,7 @@ const I18N = (() => {
       statsNone: '이 판의 AI 전적: 아직 없음',
       tip: '<b>플레이 방법:</b> <b>왼쪽 클릭</b>으로 칸을 열고 <b>오른쪽 클릭</b>으로 깃발을 꽂습니다. 깃발이 모두 꽂힌 숫자를 클릭하면 주변 칸이 열립니다. 모바일에서는 <b>길게 누르기</b> 또는 <b>깃발 모드</b>를 사용하세요. <b>F2</b>로 새 게임.',
       aboutTitle: 'Auto-Minesweeper 소개',
-      about: `Auto-Minesweeper는 AI 솔버가 내장된 무료 오픈 소스 지뢰찾기 게임입니다. <b>AI 자동 플레이</b>를 눌러 AI가 플레이하는 모습을 보거나 <b>힌트</b>로 최선의 다음 수를 확인하세요. AI는 먼저 간단한 논리로 추론한 뒤, 경계에서 가능한 모든 지뢰 배치를 열거해 각 칸의 <b>정확한 지뢰 확률</b>을 계산하고, 확실히 안전한 칸이 없을 때만 가장 안전한 칸을 추측합니다. <b>지뢰 확률 표시</b>로 AI의 판단을, <b>자동 재시작</b>으로 승률을 확인할 수 있습니다. 소스 코드는 ${REPO}에 있습니다.`,
+      about: `Auto-Minesweeper는 AI 솔버가 내장된 무료 오픈 소스 지뢰찾기 게임입니다. <b>AI 자동 플레이</b>를 눌러 AI가 플레이하는 모습을 보거나 <b>힌트</b>로 최선의 다음 수를 확인하세요. AI는 먼저 간단한 논리로 추론한 뒤, 경계에서 가능한 모든 지뢰 배치를 열거해 각 칸의 <b>정확한 지뢰 확률</b>을 계산하고, 확실히 안전한 칸이 없을 때는 한 수 앞을 내다보고, 안전하면서 다음 수로 이어질 가능성이 높은 칸을 골라 추측합니다. <b>지뢰 확률 표시</b>로 AI의 판단을, <b>자동 재시작</b>으로 승률을 확인할 수 있습니다. 소스 코드는 ${REPO}에 있습니다.`,
     },
   };
 

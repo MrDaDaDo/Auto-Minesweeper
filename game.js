@@ -88,6 +88,7 @@ function newGame(keepAi = false) {
   aiPlayed = false;
   analysis = null;
   hintIdx = -1;
+  aiQueue = [];
   overlayEl.classList.remove('show');
   buildBoard();
   render();
@@ -446,6 +447,7 @@ let aiRunId = 0;
 let aiTimer = null;
 let aiMoves = 0;
 let aiGuesses = 0;
+let aiQueue = [];
 
 function updateAiToggle() {
   aiToggle.textContent = t(aiRunning ? 'aiStop' : 'aiStart');
@@ -479,7 +481,23 @@ function scheduleAi(runId, ms) {
   aiTimer = setTimeout(() => aiStep(runId), ms);
 }
 
-// 每一步：插上所有確定的雷、翻開所有確定安全的格子；都沒有才猜機率最低的一格
+// 下一個要執行的動作：先消化上次推理出的確定動作，用完才重新分析；都不確定時猜一格
+function nextAiAction() {
+  while (aiQueue.length) {
+    const action = aiQueue.shift();
+    if (opened[action.i] || flagged[action.i]) continue;
+    return action;
+  }
+  const a = getAnalysis();
+  aiQueue = [
+    ...a.mines.map(i => ({ type: 'flag', i })),
+    ...a.safe.map(i => ({ type: 'reveal', i })),
+  ];
+  if (aiQueue.length) return aiQueue.shift();
+  return { type: 'reveal', i: a.best, guess: !a.first };
+}
+
+// 每一步只做一個動作（插一面旗或翻一格），方便觀看 AI 的推理過程
 function aiStep(runId) {
   if (runId !== aiRunId) return;
   if (over) {
@@ -490,16 +508,9 @@ function aiStep(runId) {
     scheduleAi(runId, settings.delay);
     return;
   }
-  const a = getAnalysis();
-  act(() => {
-    for (const m of a.mines) if (!flagged[m]) toggleFlag(m);
-    if (a.safe.length) {
-      for (const s of a.safe) reveal(s);
-    } else {
-      if (!a.first) aiGuesses++;
-      reveal(a.best);
-    }
-  }, true);
+  const action = nextAiAction();
+  if (action.guess) aiGuesses++;
+  act(() => (action.type === 'flag' ? toggleFlag(action.i) : reveal(action.i)), true);
   aiMoves++;
   setAiStatus();
   if (over && !settings.autoRestart) {

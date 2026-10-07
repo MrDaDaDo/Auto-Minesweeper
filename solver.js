@@ -3,7 +3,12 @@ const Solver = (() => {
   const UNKNOWN = -1;
   const FLAG = -2;
   const NODE_LIMIT = 200000; // 單一連通區塊窮舉的節點上限，超過改用近似機率
+  const LOOKAHEAD_NODE_LIMIT = 20000; // 猜測前模擬翻開結果時用較小的上限
+  const APPROX_CLAMP = 0.001; // 近似機率不可當成確定，夾在 (0, 1) 之間
   const EPS = 1e-9;
+  const GUESS_MARGIN = 0.05; // 猜測時考慮機率比最低值高出這麼多以內的格子
+  const MAX_CANDIDATES = 10;
+  const PROGRESS_SAFETY_WEIGHT = 1;
 
   const nbCache = new Map();
 
@@ -47,7 +52,7 @@ const Solver = (() => {
 
   // 對一個連通區塊窮舉所有合法的雷配置
   // 回傳 ways[k]：放 k 顆雷的配置數；hits[k][x]：其中第 x 格是雷的配置數（皆已正規化）
-  function solveComponent(cells, cons, maxMines) {
+  function solveComponent(cells, cons, maxMines, nodeLimit) {
     const n = cells.length;
     const local = new Map(cells.map((c, i) => [c, i]));
     const m = cons.length;
@@ -74,7 +79,7 @@ const Solver = (() => {
         for (let x = 0; x < n; x++) if (assign[x]) hk[x]++;
         return;
       }
-      if (++nodes > NODE_LIMIT) { aborted = true; return; }
+      if (++nodes > nodeLimit) { aborted = true; return; }
       for (let v = 0; v <= 1; v++) {
         if (v === 1 && k >= maxMines) break;
         let ok = true;
@@ -112,7 +117,7 @@ const Solver = (() => {
       w[k0] = 1;
       const h = Array.from({ length: k0 + 1 }, () => new Float64Array(n));
       h[k0] = p;
-      return { cells, ways: w, hits: h, approx: true };
+      return { cells, ways: w, hits: h, logScale: 0, approx: true };
     }
 
     const max = Math.max(...ways);
@@ -122,12 +127,19 @@ const Solver = (() => {
         for (let x = 0; x < n; x++) hits[k][x] /= max;
       }
     }
-    return { cells, ways, hits, approx: false };
+    return { cells, ways, hits, logScale: max > 0 ? Math.log(max) : 0, approx: false };
   }
 
   // view: { w, h, mines, cells }，cells[i] 為 0~8（已開）、UNKNOWN 或 FLAG
   // 回傳每個未開格的雷機率、確定安全/確定是雷的格子，以及最佳下一步
-  function analyze({ w, h, mines, cells }) {
+  function analyze(view, options = {}) {
+    const a = analyzeCore(view);
+    if (!a.first && !a.safe.length && options.lookahead !== false) chooseGuess(view, a);
+    return a;
+  }
+
+  // 計算每格雷機率；logZ 為所有合法雷配置數（含內部格）的對數，用來比較不同假設下的機率
+  function analyzeCore({ w, h, mines, cells }, nodeLimit = NODE_LIMIT) {
     const n = w * h;
     const nb = getNeighbors(w, h);
     const prob = new Float64Array(n).fill(NaN);
@@ -140,6 +152,7 @@ const Solver = (() => {
 
     // 每個已開數字格形成一條限制：周圍未開格的雷數 = 數字 - 周圍旗子數
     const cons = [];
+    let contradiction = false;
     for (let i = 0; i < n; i++) {
       if (cells[i] < 0) continue;
       const unk = [];
@@ -149,6 +162,7 @@ const Solver = (() => {
         else if (cells[j] === FLAG) f++;
       }
       if (unk.length) cons.push({ cells: unk, need: cells[i] - f });
+      else if (cells[i] !== f) contradiction = true;
     }
 
     // 簡單推理：0 = 未定，1 = 確定是雷，2 = 確定安全
@@ -178,6 +192,7 @@ const Solver = (() => {
     for (let i = 0; i < n; i++) if (state[i] === 1) minesLeft--;
 
     const reduced = [];
+    if (minesLeft < 0) contradiction = true;
     for (const c of cons) {
       let need = c.need;
       const free = [];
@@ -185,6 +200,7 @@ const Solver = (() => {
         if (state[j] === 1) need--;
         else if (state[j] === 0) free.push(j);
       }
+      if (need < 0 || need > free.length) contradiction = true;
       if (free.length) reduced.push({ cells: free, need });
     }
 
@@ -213,7 +229,7 @@ const Solver = (() => {
           }
         }
       }
-      comps.push(solveComponent(list, [...consSet].map(ci => reduced[ci]), Math.max(0, minesLeft)));
+      comps.push(solveComponent(list, [...consSet].map(ci => reduced[ci]), Math.max(0, minesLeft), nodeLimit));
     }
 
     const interior = [];
@@ -242,6 +258,7 @@ const Solver = (() => {
     };
     let Z = 0;
     let interiorMines = 0;
+    const logScale = comps.reduce((s, c) => s + c.logScale, 0);
     for (let K = 0; K < total.length; K++) {
       const wgt = total[K] * coef(K);
       Z += wgt;
@@ -251,6 +268,7 @@ const Solver = (() => {
     const undetermined = [];
     for (let i = 0; i < n; i++) if (cells[i] === UNKNOWN && state[i] === 0) undetermined.push(i);
 
+    if (contradiction) Z = 0;
     if (Z > 0 && Number.isFinite(Z)) {
       comps.forEach((c, ci) => {
         const others = convolve(prefix[ci], suffix[ci + 1]);
@@ -274,6 +292,13 @@ const Solver = (() => {
       // 盤面矛盾（例如插錯旗）：退而求其次，平均分配剩餘雷數
       const p = undetermined.length ? Math.min(1, Math.max(0, minesLeft / undetermined.length)) : 0;
       undetermined.forEach(i => { prob[i] = p; });
+    }
+    // 有區塊用了近似機率時，只有簡單推理得到的結論才算確定
+    const approx = comps.some(c => c.approx);
+    if (approx) {
+      undetermined.forEach(i => {
+        prob[i] = Math.min(1 - APPROX_CLAMP, Math.max(APPROX_CLAMP, prob[i]));
+      });
     }
     for (let i = 0; i < n; i++) {
       if (state[i] === 1) prob[i] = 1;
@@ -305,7 +330,58 @@ const Solver = (() => {
       bestProb = 0;
     }
 
-    return { prob, safe, mines: mineList, best, bestProb, first };
+    const logZ = Z > 0 && Number.isFinite(Z) ? Math.log(Z) + base + logScale : -Infinity;
+    return { prob, safe, mines: mineList, best, bestProb, first, logZ, unknownCount };
+  }
+
+  // 沒有確定安全的格子時：在機率接近最低的候選格中，模擬翻開後可能出現的每個數字，
+  // 挑「安全且翻開後能推出新的確定安全格」機率最高的一格
+  function chooseGuess(view, a) {
+    const { w, h, cells } = view;
+    const nb = getNeighbors(w, h);
+    const list = [];
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i] === UNKNOWN && a.prob[i] < 1 - EPS) list.push(i);
+    }
+    if (!list.length || a.logZ === -Infinity) return;
+    let minP = Infinity;
+    for (const i of list) minP = Math.min(minP, a.prob[i]);
+    const unkNb = i => nb[i].reduce((s, j) => s + (cells[j] === UNKNOWN), 0);
+    // 只考慮機率在最低值附近的格子；內部格（沒有鄰接數字）機率都相同，只取鄰居最少的幾格
+    const frontier = [], inner = [];
+    for (const i of list) {
+      if (a.prob[i] > minP + GUESS_MARGIN) continue;
+      (nb[i].some(j => cells[j] >= 0) ? frontier : inner).push(i);
+    }
+    inner.sort((x, y) => unkNb(x) - unkNb(y));
+    frontier.sort((x, y) => a.prob[x] - a.prob[y]);
+    const candidates = frontier.slice(0, MAX_CANDIDATES).concat(inner.slice(0, 2));
+
+    let best = a.best, bestScore = -Infinity;
+    const next = Int8Array.from(cells);
+    for (const c of candidates) {
+      let flags = 0, unk = 0;
+      for (const j of nb[c]) {
+        if (cells[j] === FLAG) flags++;
+        else if (cells[j] === UNKNOWN) unk++;
+      }
+      let progress = 0;
+      for (let v = flags; v <= flags + unk; v++) {
+        next[c] = v;
+        const b = analyzeCore({ ...view, cells: next }, LOOKAHEAD_NODE_LIMIT);
+        if (b.logZ === -Infinity) continue;
+        const pv = Math.exp(b.logZ - a.logZ);
+        if (b.safe.length || b.unknownCount === b.mines.length) progress += pv;
+      }
+      next[c] = UNKNOWN;
+      const score = progress + PROGRESS_SAFETY_WEIGHT * (1 - a.prob[c]);
+      if (score > bestScore + 1e-9) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    a.best = best;
+    a.bestProb = a.prob[best];
   }
 
   return { analyze, getNeighbors, UNKNOWN, FLAG };
