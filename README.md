@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/og-image.png" alt="Auto-Minesweeper: play Minesweeper in your browser, or let a probability-based AI solve it for you" width="640">
+
 # Auto-Minesweeper
 
 **Minesweeper in the browser with a probability-based AI that plays for you.**
