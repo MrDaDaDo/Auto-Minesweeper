@@ -85,6 +85,13 @@ solver.js    Logic + exact-probability Minesweeper solver
 i18n.js      Translations and language switching
 ```
 
+## More Auto Games
+
+- [Auto-2048](https://github.com/MrDaDaDo/Auto-2048) – 2048 with a tunable Expectimax AI
+- [Auto-Sudoku](https://github.com/MrDaDaDo/Auto-Sudoku) – Sudoku with a human-technique AI solver
+
+Play them all at https://mrdadado.github.io/
+
 ## License
 
 Released into the public domain under [The Unlicense](LICENSE).
