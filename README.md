@@ -33,6 +33,7 @@ A dependency-free browser version of **Minesweeper** with a built-in **AI solver
 - **Hint**: highlights the AI's suggested next cell and tells you whether it is certain or a guess
 - **Mine probabilities**: overlays the exact mine probability (%) on every covered cell
 - **Auto restart + win-rate stats**: let the AI play game after game and track its record per board
+- **Light and dark themes**: follows your system setting, with a toggle that is remembered across all Auto Games
 - **Multilingual UI**: English, 繁體中文, 简体中文, 日本語, 한국어 (auto-detected from the browser, selection remembered)
 - **Best times** and AI stats saved in `localStorage`
 
